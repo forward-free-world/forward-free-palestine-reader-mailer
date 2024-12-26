@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Diagnostics;
 using Resend;
 using VoicesOfGaza.Mailer;
 
@@ -35,7 +34,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.MapPost("/mail", async (IResend resend, MailRequest request) =>
+app.MapPost("/mail", async (IResend resend, MailRequest request, HttpContext context) =>
 {
     try
     {
@@ -47,12 +46,16 @@ app.MapPost("/mail", async (IResend resend, MailRequest request) =>
 
         var message = new EmailMessage
         {
-            From = AppConfiguration.FromEmail,
-            Subject = request.Subject ?? AppConfiguration.DefaultSubject,
+            From = $"Voices Of Gaza <{AppConfiguration.FromEmail}>",
+            Subject = AppConfiguration.DefaultSubject,
             HtmlBody = request.Text
         };
 
-        message.To.Add(AppConfiguration.ToEmail);
+        var to = !string.IsNullOrEmpty(request.Name)
+            ? $"{request.Name} <{AppConfiguration.ToEmail}>"
+            : AppConfiguration.ToEmail;
+
+        message.To.Add(to);
         if (request.Email != null)
         {
             message.ReplyTo = [request.Email];
@@ -72,6 +75,7 @@ app.MapPost("/mail", async (IResend resend, MailRequest request) =>
         return Results.Json(data: ex.Message, statusCode: 500);
     }
 
+    context.Response.Headers.Append("Access-Control-Allow-Origin", "https://voicesofgaza.org.za");
     return Results.Ok();
 })
 .WithName("PostMailRequest");
@@ -82,8 +86,8 @@ internal record MailRequest
 {
     public string? Email { get; set; }
 
-    [DefaultValue("Test Email")]
-    public string? Subject { get; set; }
+    [DefaultValue("John Smith")]
+    public string? Name { get; set; }
 
     [DefaultValue("Hello world!")]
     public required string Text { get; set; }
