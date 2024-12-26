@@ -20,6 +20,14 @@ builder.Services.Configure<ResendClientOptions>(o =>
 builder.Services.AddSingleton<IResend, ResendClient>();
 builder.Services.AddAWSLambdaHosting(LambdaEventSource.RestApi);
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSpecificOrigin",
+        builder => builder.WithOrigins("http://localhost:4200")
+            .AllowAnyHeader()
+            .AllowAnyMethod());
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -33,12 +41,16 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+#if DEBUG
+app.UseCors("AllowSpecificOrigin");
+#endif
+
 app.MapPost("/mail", async (IResend resend, MailRequest request, HttpContext context) =>
 {
     try
     {
         var variableDependencyValues = new string[4] { AppConfiguration.ResendKey, AppConfiguration.DefaultSubject, AppConfiguration.ToEmail, AppConfiguration.FromEmail };
-        if(variableDependencyValues.Any(value => string.IsNullOrEmpty(value)))
+        if (variableDependencyValues.Any(value => string.IsNullOrEmpty(value)))
         {
             throw new Exception("Environment configuration incomplete");
         }
@@ -69,7 +81,7 @@ app.MapPost("/mail", async (IResend resend, MailRequest request, HttpContext con
             await resend.EmailSendAsync(message);
         }
     }
-    catch(Exception ex)
+    catch (Exception ex)
     {
         return Results.Json(data: ex.Message, statusCode: 500);
     }
