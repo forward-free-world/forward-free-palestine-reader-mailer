@@ -62,14 +62,13 @@ app.MapPost("/mail", async (IResend resend, MailRequest request, HttpContext con
             HtmlBody = request.Text
         };
 
-        var to = !string.IsNullOrEmpty(request.Name)
-            ? $"{request.Name} <{AppConfiguration.ToEmail}>"
-            : AppConfiguration.ToEmail;
-
-        message.To.Add(to);
+        message.To.Add(AppConfiguration.ToEmail);
         if (request.Email != null)
         {
-            message.ReplyTo = [request.Email];
+            var replyTo = !string.IsNullOrEmpty(request.Name)
+            ? $"{request.Name} <{request.Email}>"
+            : request.Email;
+            message.ReplyTo = [replyTo];
         }
 
         if (resend == null)
