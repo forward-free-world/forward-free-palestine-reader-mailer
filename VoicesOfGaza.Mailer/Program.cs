@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using Resend;
 using VoicesOfGaza.Mailer;
 
@@ -41,7 +40,7 @@ app.MapPost("/mail", async (IResend resend, MailRequest request, HttpContext con
         var variableDependencyValues = new string[4] { AppConfiguration.ResendKey, AppConfiguration.DefaultSubject, AppConfiguration.ToEmail, AppConfiguration.FromEmail };
         if(variableDependencyValues.Any(value => string.IsNullOrEmpty(value)))
         {
-            throw new Exception("Environment configuration incompleted");
+            throw new Exception("Environment configuration incomplete");
         }
 
         var message = new EmailMessage
@@ -75,20 +74,10 @@ app.MapPost("/mail", async (IResend resend, MailRequest request, HttpContext con
         return Results.Json(data: ex.Message, statusCode: 500);
     }
 
-    context.Response.Headers.Append("Access-Control-Allow-Origin", "https://voicesofgaza.org.za");
+    var origin = AppConfiguration.GetOrigin(context);
+    context.Response.Headers.Append("Access-Control-Allow-Origin", origin);
     return Results.Ok();
 })
 .WithName("PostMailRequest");
 
 app.Run();
-
-internal record MailRequest
-{
-    public string? Email { get; set; }
-
-    [DefaultValue("John Smith")]
-    public string? Name { get; set; }
-
-    [DefaultValue("Hello world!")]
-    public required string Text { get; set; }
-}
