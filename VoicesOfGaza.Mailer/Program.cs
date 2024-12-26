@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using Resend;
 using VoicesOfGaza.Mailer;
 
@@ -19,7 +20,7 @@ builder.Services.Configure<ResendClientOptions>(o =>
     o.ApiToken = AppConfiguration.ResendKey!;
 });
 builder.Services.AddSingleton<IResend, ResendClient>();
-builder.Services.AddAWSLambdaHosting(LambdaEventSource.HttpApi);
+builder.Services.AddAWSLambdaHosting(LambdaEventSource.RestApi);
 
 var app = builder.Build();
 
@@ -34,10 +35,16 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.MapPost("/mail", (IResend resend, MailRequest request) =>
+app.MapPost("/mail", async (IResend resend, MailRequest request) =>
 {
     try
     {
+        var variableDependencyValues = new string[4] { AppConfiguration.ResendKey, AppConfiguration.DefaultSubject, AppConfiguration.ToEmail, AppConfiguration.FromEmail };
+        if(variableDependencyValues.Any(value => string.IsNullOrEmpty(value)))
+        {
+            throw new Exception("Environment configuration incompleted");
+        }
+
         var message = new EmailMessage
         {
             From = AppConfiguration.FromEmail,
@@ -51,14 +58,21 @@ app.MapPost("/mail", (IResend resend, MailRequest request) =>
             message.ReplyTo = [request.Email];
         }
 
-        resend.EmailSendAsync(message);
+        if (resend == null)
+        {
+            throw new Exception("Resend not injected");
+        }
+        else
+        {
+            await resend.EmailSendAsync(message);
+        }
     }
-    catch
+    catch(Exception ex)
     {
-        return Results.StatusCode(500);
+        return Results.Json(data: ex.Message, statusCode: 500);
     }
 
-    return Results.Ok();    
+    return Results.Ok();
 })
 .WithName("PostMailRequest");
 
