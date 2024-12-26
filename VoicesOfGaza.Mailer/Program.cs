@@ -55,6 +55,16 @@ app.MapPost("/mail", async (IResend resend, MailRequest request, HttpContext con
             throw new Exception("Environment configuration incomplete");
         }
 
+        var origin = AppConfiguration.GetOrigin(context);
+        if (string.IsNullOrEmpty(origin))
+        {
+            throw new Exception("Origin not found");
+        }
+        else
+        {
+            context.Response.Headers.Append("Access-Control-Allow-Origin", origin);
+        }
+
         var message = new EmailMessage
         {
             From = $"Voices Of Gaza <{AppConfiguration.FromEmail}>",
@@ -85,8 +95,6 @@ app.MapPost("/mail", async (IResend resend, MailRequest request, HttpContext con
         return Results.Json(data: ex.Message, statusCode: 500);
     }
 
-    var origin = AppConfiguration.GetOrigin(context);
-    context.Response.Headers.Append("Access-Control-Allow-Origin", origin);
     return Results.Ok();
 })
 .WithName("PostMailRequest");

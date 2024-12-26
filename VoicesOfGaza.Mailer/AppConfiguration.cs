@@ -23,7 +23,7 @@ public static class AppConfiguration
                 ?? string.Empty).Split(';')
                 ?? [];
 
-            return [.. allowedHosts.Aggregate([], (List<string> hosts, string host) =>
+            return [.. allowedHosts.Where(host => host != "*").Aggregate([], (List<string> hosts, string host) =>
             {
                 var protocol = host.Contains("localhost") ? "http" : "https";
                 hosts.Add($"{protocol}://{host}");
